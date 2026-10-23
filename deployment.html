@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deploy the custom PasarGuard node image</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #17211b;
+    --muted: #53615a;
+    --line: #d8e1dc;
+    --accent: #0f6b4f;
+    --accent-soft: #edf7f2;
+    --warn: #7a4700;
+    --warn-soft: #fff7e8;
+    --danger: #8a2020;
+    --danger-soft: #fff1f1;
+    --code-bg: #f3f7f4;
+    --pre-bg: #111c16;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    color: var(--ink);
+    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  a { color: var(--accent); text-underline-offset: 2px; }
+  a:hover { text-decoration-thickness: 2px; }
+  .skip {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: #fff;
+    padding: .75rem 1rem;
+    z-index: 10;
+  }
+  .skip:focus { left: 1rem; }
+  .page-header, main, nav, footer {
+    width: min(1040px, 100%);
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  .page-header { padding-top: 2.5rem; }
+  .eyebrow {
+    margin: 0 0 .35rem;
+    color: var(--accent);
+    font-size: .82rem;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  h1 {
+    margin: 0;
+    max-width: 850px;
+    font-size: clamp(2rem, 4vw, 3rem);
+    line-height: 1.12;
+    letter-spacing: -.025em;
+  }
+  .lede {
+    max-width: 800px;
+    margin: 1rem 0 1.5rem;
+    color: var(--muted);
+    font-size: 1.12rem;
+  }
+  h2 {
+    margin: 0 0 .8rem;
+    padding-top: .25rem;
+    font-size: clamp(1.45rem, 2.5vw, 1.8rem);
+    line-height: 1.25;
+    letter-spacing: -.01em;
+  }
+  h3 {
+    margin: 1.6rem 0 .55rem;
+    font-size: 1.13rem;
+    line-height: 1.3;
+  }
+  h4 { margin: 1.1rem 0 .4rem; font-size: 1rem; }
+  p { margin: .65rem 0; }
+  ul, ol { padding-left: 1.4rem; }
+  li { margin: .4rem 0; }
+  code {
+    padding: .12em .32em;
+    border-radius: 4px;
+    background: var(--code-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    font-size: .88em;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    margin: .8rem 0;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    border-radius: 8px;
+    background: var(--pre-bg);
+    color: #e9f4ed;
+    line-height: 1.5;
+    -webkit-overflow-scrolling: touch;
+  }
+  pre code {
+    padding: 0;
+    background: transparent;
+    color: inherit;
+    font-size: .85rem;
+    overflow-wrap: normal;
+    white-space: pre;
+  }
+  .image-ref {
+    display: block;
+    padding: .9rem 1rem;
+    border: 1px solid #b9d9c8;
+    border-radius: 8px;
+    background: var(--accent-soft);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: .9rem;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .ref-label {
+    display: block;
+    margin-bottom: .25rem;
+    color: var(--muted);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: .78rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .callout {
+    margin: 1rem 0;
+    padding: .85rem 1rem;
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--accent);
+    border-radius: 6px;
+    background: var(--accent-soft);
+  }
+  .callout > :first-child { margin-top: 0; }
+  .callout > :last-child { margin-bottom: 0; }
+  .callout.warn {
+    border-left-color: var(--warn);
+    background: var(--warn-soft);
+  }
+  .callout.danger {
+    border-left-color: var(--danger);
+    background: var(--danger-soft);
+  }
+  .callout h3 { margin-top: 0; }
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: .75rem;
+    margin: 1.2rem 0;
+  }
+  .fact {
+    padding: .75rem .85rem;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fbfdfb;
+  }
+  .fact-label {
+    display: block;
+    color: var(--muted);
+    font-size: .76rem;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+  .fact-value { display: block; margin-top: .15rem; font-size: .95rem; }
+  nav.toc {
+    margin-top: 1.5rem;
+    padding-block: 1.1rem;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  nav.toc h2 { margin: 0 0 .35rem; font-size: .9rem; letter-spacing: .04em; text-transform: uppercase; }
+  nav.toc ol {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .3rem 1.4rem;
+    margin: 0;
+    padding-left: 1.2rem;
+    font-size: .92rem;
+  }
+  main { padding-bottom: 1rem; }
+  main > section {
+    margin-top: 2.3rem;
+    padding-top: .6rem;
+    border-top: 1px solid var(--line);
+  }
+  .step {
+    margin-top: 1.5rem;
+  }
+  .step h3 { display: flex; gap: .55rem; align-items: baseline; }
+  .step-number {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: .82rem;
+    font-weight: 700;
+  }
+  .table-wrap { margin: 1rem 0; overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .94rem;
+  }
+  caption {
+    text-align: left;
+    color: var(--muted);
+    font-weight: 700;
+    font-size: .86rem;
+    padding-bottom: .35rem;
+  }
+  th, td {
+    padding: .55rem .7rem;
+    border: 1px solid var(--line);
+    vertical-align: top;
+    text-align: left;
+  }
+  thead th { background: #f5f9f6; }
+  tbody th { font-weight: 600; background: #fbfdfb; }
+  td code { overflow-wrap: anywhere; }
+  .muted { color: var(--muted); }
+  .nowrap { white-space: nowrap; }
+  .tag {
+    display: inline-block;
+    padding: .08rem .4rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #f7faf8;
+    color: var(--muted);
+    font-size: .78rem;
+    line-height: 1.5;
+  }
+  .source-list li { margin: .55rem 0; }
+  footer {
+    margin-top: 2rem;
+    padding-top: 1rem;
+    padding-bottom: 2rem;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: .86rem;
+  }
+  @media (max-width: 600px) {
+    .page-header { padding-top: 1.5rem; }
+    h1 { font-size: 1.9rem; }
+    .lede { font-size: 1rem; }
+    th, td { padding: .45rem .5rem; }
+    pre { padding: .8rem; }
+    pre code { font-size: .8rem; }
+  }
+  @media print {
+    body { color: #000; background: #fff; }
+    nav.toc { break-inside: avoid; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #f4f4f4; color: #000; border: 1px solid #bbb; }
+    a { color: #000; }
+    .callout, .fact { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="page-header">
+  <p class="eyebrow">Operations guide</p>
+  <h1>Deploy the custom PasarGuard node image</h1>
+  <p class="lede">How to replace the image on an existing PasarGuard Node Docker Compose server, verify it with a canary, and roll back without touching credentials, certificates, or data.</p>
+
+  <div class="callout danger">
+    <p><strong>Canary first. Do not roll out to every node at once.</strong> Recreating the Node container interrupts its Xray processes and disconnects active clients on that node. Validate one non-critical server, then move one server at a time.</p>
+  </div>
+
+  <div>
+    <span class="ref-label">Production image reference: use this exact digest</span>
+    <code class="image-ref">ghcr.io/chownyourlife/pasarguard-node-custom-xray@sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code>
+  </div>
+
+  <div class="callout warn">
+    <p><strong>Existing server: changing the image alone is not enough if the host used the installer's core-update flow.</strong> That flow sets <code>XRAY_EXECUTABLE_PATH</code> to an external core under the data directory. Set <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code> in the actual environment, and keep the node data mount (default <code>/var/lib/pg-node</code>). See <a href="#xray-path">deploy step 3</a>.</p>
+  </div>
+
+  <div class="facts" aria-label="Image facts">
+    <div class="fact"><span class="fact-label">Platforms</span><span class="fact-value">linux/amd64, linux/arm64</span></div>
+    <div class="fact"><span class="fact-label">Node application</span><span class="fact-value">PasarGuard Node v0.5.5</span></div>
+    <div class="fact"><span class="fact-label">Custom core</span><span class="fact-value">Xray fork commit c876846</span></div>
+    <div class="fact"><span class="fact-label">Registry access</span><span class="fact-value">Public GHCR package; no login required</span></div>
+  </div>
+
+  <p class="muted">A community image built from the upstream Node v0.5.5 image; it is not a PasarGuard-maintained release. It replaces only <code>/usr/local/bin/xray</code>.</p>
+</header>
+
+<nav class="toc" aria-label="Page contents">
+  <h2>On this page</h2>
+  <ol>
+    <li><a href="#scope">Scope and image</a></li>
+    <li><a href="#before">Before touching a server</a></li>
+    <li><a href="#deploy">Deploy to an existing server</a></li>
+    <li><a href="#verify">Verify the canary</a></li>
+    <li><a href="#rollout">Rollout and rollback</a></li>
+    <li><a href="#fresh">Fresh-server prerequisites</a></li>
+    <li><a href="#compatibility">Compatibility and limits</a></li>
+    <li><a href="#evidence">Verification evidence</a></li>
+    <li><a href="#maintenance">Maintenance and builds</a></li>
+    <li><a href="#changelog">Initial changelog</a></li>
+    <li><a href="#sources">Sources</a></li>
+  </ol>
+</nav>
+
+<main id="main">
+
+<section id="scope">
+  <h2>Scope and image</h2>
+  <p>This guide is for an <strong>existing</strong> PasarGuard Node deployment already managed by Docker Compose. The deployment procedure changes the service image and sets or confirms <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code> in the environment Compose uses, so Node does not keep selecting an external core. Those are the intended changes; an obsolete host-binary override may also have to be removed. The procedure does not create a node, issue certificates, rotate an API key, or change panel records.</p>
+
+  <div class="callout">
+    <p><strong>Instructions, not executed commands.</strong> The deployment, verification, and rollback commands on this page are for you to run on your own server. They were not run against your server for this project. The checks that <em>were</em> executed are listed separately in <a href="#evidence">Verification evidence</a>.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Image identity</caption>
+      <thead>
+        <tr><th scope="col">Item</th><th scope="col">Value</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Required reference</th><td><code>ghcr.io/chownyourlife/pasarguard-node-custom-xray@sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code></td></tr>
+        <tr><th scope="row">Image index platforms</th><td><code>linux/amd64</code> and <code>linux/arm64</code>. Docker selects the matching architecture automatically.</td></tr>
+        <tr><th scope="row">Base image</th><td><code>docker.io/pasarguard/node:v0.5.5@sha256:5f41e456ad68c84f42855b41eb41d69a79e8b3795bbe6a739ed74c4627eaa99b</code></td></tr>
+        <tr><th scope="row">Custom Xray source</th><td><code>T3ST3ST3R0N/Xray-core</code> at commit <code>c8768463568d9655a67228531d4ed2690ee49dd7</code></td></tr>
+        <tr><th scope="row">Node binary and entrypoint</th><td>Inherited unchanged from the Node v0.5.5 base image.</td></tr>
+        <tr><th scope="row">Container filesystem change</th><td><code>/usr/local/bin/xray</code> is replaced; the Xray license file is added. Node packages and the base image's geodata under <code>/usr/local/share/xray</code> are preserved.</td></tr>
+        <tr><th scope="row">Mutable tags also published</th><td><code>latest</code> and <code>sha-5355b80d3b345ac2d643917f596b94eeaf88a637</code>. These are convenience tags, not immutable pins. A later workflow run can move them.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>Use the digest, not <code>latest</code>.</strong> The digest is the immutable, content-addressed reference to the exact multi-arch image. The commit-style tag is useful for traceability, but this guide relies on the digest for production and rollback.</p>
+
+  <p><strong>No <code>docker login</code> is required.</strong> The GHCR package is public, and an anonymous ARM64 pull using an empty Docker credential configuration succeeded (see <a href="#evidence">evidence</a>). If a pull is denied, check package visibility, the exact digest, and network egress to <code>ghcr.io</code>; do not add credentials from this repository.</p>
+</section>
+
+<section id="before">
+  <h2>Before touching a server</h2>
+  <ul>
+    <li><strong>Check panel compatibility first.</strong> The Node v0.5.5 release notes explicitly list panel versions <strong>v5.4.1</strong> and <strong>v5.5.0</strong> as compatible. Older panels are unverified by this project. Routing hot reload and Xray WireGuard inbounds require panel v5.5.0 according to those release notes. Do not combine a panel upgrade with this node-image canary.</li>
+    <li><strong>Preserve credentials, certificates, and data.</strong> Existing <code>API_KEY</code>, TLS certificate/key files, data under the existing node data directory (default <code>/var/lib/pg-node</code>), network mode, capabilities, and all other environment variables must remain unchanged. The one environment value that must be set or confirmed is <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code>, because the upstream core-update flow can point it at an external core (see step 3 below). The image does not rotate or regenerate credentials or certificates. The API key in the panel must still match the node environment.</li>
+    <li><strong>Do not newly enable WireGuard capabilities or routing.</strong> Keep the host's existing <code>cap_add</code>, sysctls, and routing configuration exactly as they are. This image supplies a core binary; it does not configure host networking features.</li>
+    <li><strong>Expect disruption.</strong> Recreating the Node container stops its managed Xray process and disconnects sessions through that node. Schedule a maintenance window and pick a low-risk server for the canary.</li>
+    <li><strong>Check the host architecture.</strong> Only <code>linux/amd64</code> and <code>linux/arm64</code> are published. Check with <code>uname -m</code>: <code>x86_64</code> maps to amd64, <code>aarch64</code> or <code>arm64</code> maps to arm64.</li>
+    <li><strong>Check Docker and egress.</strong> Use a current Docker Engine with the Compose v2 plugin, confirm the daemon is reachable, and allow HTTPS access to <code>ghcr.io</code> for the pull.</li>
+  </ul>
+
+<pre><code>uname -m
+docker compose version
+docker info &gt;/dev/null</code></pre>
+
+  <p>The last command prints nothing when the Docker daemon is reachable. If it fails, fix Docker access before changing any Compose file.</p>
+</section>
+
+<section id="deploy">
+  <h2>Deploy to an existing server</h2>
+  <p>Find the directory of the stack that is already running; do not deploy from a path you merely guessed. The installer's conventional paths are mentioned below only as recognizable defaults, not as universal deployment paths.</p>
+
+  <div class="step">
+    <h3><span class="step-number">1</span>Locate the live stack and the actual service name</h3>
+<pre><code># List running Compose projects and their status.
+docker compose ls
+
+# On newer Compose versions, this includes the config file path(s).
+docker compose ls --format json</code></pre>
+    <p>If <code>--format json</code> is unavailable, identify the Node container from <code>docker ps</code>, then read only its Compose labels (not the full container environment):</p>
+<pre><code># Compose project name, working directory, and config file path(s).
+docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' CONTAINER_ID
+docker inspect --format '{{index .Config.Labels "com.docker.compose.project.working_dir"}}' CONTAINER_ID
+docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' CONTAINER_ID</code></pre>
+    <p>Replace <code>CONTAINER_ID</code> with the actual container ID. If the stack is started by a wrapper or systemd unit with explicit <code>-f</code> file arguments, use that same invocation and working directory.</p>
+    <div class="callout warn">
+      <p><strong>Keep the existing Compose project; do not create a second stack.</strong> The upstream installer conventionally uses project name <code>pg-node</code> (matching the <code>/opt/pg-node</code> directory basename), <code>/opt/pg-node/docker-compose.yml</code>, and <code>/opt/pg-node/.env</code>. A custom <code>--name</code> or <code>APP_DIR</code> changes those names or paths, so treat the defaults as conventional, not universal. Either stay in the existing stack directory or apply the same <code>-p</code> project and <code>-f</code> file options (or exported <code>COMPOSE_PROJECT_NAME</code>/<code>COMPOSE_FILE</code>) to every Compose command. Running from a different directory without them can create a new project with a separate container.</p>
+    </div>
+    <p>Change to the stack directory and confirm the service names:</p>
+<pre><code>docker compose config --services</code></pre>
+    <p>The upstream default service name is <code>node</code>, and the examples below use it. <strong>Use the actual service name reported by your stack.</strong> Substitute it in <code>SERVICE</code>; do not blindly assume <code>node</code> if your Compose project names it differently.</p>
+<pre><code>SERVICE=node   # replace with the actual service name if different</code></pre>
+    <p>All remaining <code>docker compose</code> commands assume you are working in this existing stack context. If you are not, include the same <code>-p</code> and <code>-f</code> options on every command.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="step-number">2</span>Record the current image and back up the real Compose file</h3>
+    <p>Record the current image reference and image ID for rollback. These commands deliberately print only selected fields; they do not dump the container's full environment, which can contain the API key.</p>
+<pre><code>STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+CID=$(docker compose ps -q "$SERVICE")
+
+# Current image reference, tag, and image ID.
+docker compose images "$SERVICE"
+docker inspect --format 'container={{.Id}} image_ref={{.Config.Image}} image_id={{.Image}}' "$CID"
+
+# Preserve the exact previous image locally under a rollback tag.
+docker tag "$(docker inspect --format '{{.Image}}' "$CID")" "pg-node-rollback:$STAMP"</code></pre>
+    <p>If the service has more than one container, capture each container separately before proceeding. A normal single-server node service should have one.</p>
+    <p>Back up the file that Compose actually reads. The example uses <code>compose.yaml</code>; substitute the real filename from the <code>ConfigFiles</code> output, such as <code>docker-compose.yml</code>.</p>
+<pre><code>COMPOSE_PATH=compose.yaml   # replace with the actual Compose file
+cp -p -- "$COMPOSE_PATH" "$COMPOSE_PATH.bak.$STAMP"</code></pre>
+    <p>If there are multiple Compose files, back up each one. If an env file supplies the service environment (the upstream installer convention is <code>/opt/pg-node/.env</code>; custom <code>APP_DIR</code> values differ), back it up as well before changing <code>XRAY_EXECUTABLE_PATH</code>:</p>
+<pre><code>ENV_FILE=.env   # only if the service uses an env file; use its actual path
+cp -p -- "$ENV_FILE" "$ENV_FILE.bak.$STAMP"</code></pre>
+    <p>The env backup contains the API key and possibly other sensitive values. Restrict its permissions, keep it out of the repository and chat, and never paste it into a ticket. Keep the image-reference record separate from the env backup.</p>
+    <p><code>STAMP</code>, <code>CID</code>, <code>COMPOSE_PATH</code>, and <code>ENV_FILE</code> are shell variables. Keep the same shell session for the deployment and rollback, or record their values in your private notes so you can restore the same files later.</p>
+  </div>
+
+  <div class="step" id="xray-path">
+    <h3><span class="step-number">3</span>Point Xray at the baked binary and remove host overrides</h3>
+    <p><strong>This is a required companion change, not just an image swap.</strong> The upstream <a href="https://raw.githubusercontent.com/PasarGuard/scripts/main/pg-node.sh">PasarGuard installer script</a> (read for this guide, not executed) has a core-update flow that writes <code>XRAY_EXECUTABLE_PATH</code> into the env file, pointing at an external core under the data directory (<code>DATA_DIR/xray-core/xray</code>). If that setting is carried forward, Node keeps using the external core after the image changes, and the custom binary at <code>/usr/local/bin/xray</code> is ignored.</p>
+    <p>In the environment actually used by the service, set exactly:</p>
+<pre><code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code></pre>
+    <p>If the service uses <code>env_file</code>, change the value in that file (upstream installer convention: <code>/opt/pg-node/.env</code>; custom paths differ). If the value is written inline in the Compose service's <code>environment</code>, change it there. If a systemd unit, wrapper, or <code>docker run</code> command injects the variable, change it in that file or invocation as well, and ensure there is only one effective value. Add the line if it is missing; change only this value. Preserve <code>API_KEY</code>, certificate paths, data paths, network settings, capabilities, and all other variables.</p>
+<pre><code># Current value in the running container; this filters to one variable only.
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$CID" | grep '^XRAY_EXECUTABLE_PATH=' || true
+
+# If ENV_FILE was set for an env file, check that actual file.
+grep -nE '^[[:space:]]*XRAY_EXECUTABLE_PATH[[:space:]]*=' "$ENV_FILE" || true
+
+# Supplemental: check inline environment in the rendered Compose config.
+docker compose config | grep -nE 'XRAY_EXECUTABLE_PATH|/usr/local/bin/xray' || true
+
+# A bind mount at /usr/local/bin/xray would also hide the baked binary.
+docker inspect --format '{{range .Mounts}}{{println .Source "-&gt;" .Destination}}{{end}}' "$CID" | grep -F '/usr/local/bin/xray' || true</code></pre>
+    <ul>
+      <li><strong>Required value:</strong> <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code>. Do not leave it pointing at <code>&lt;data-dir&gt;/xray-core/xray</code>.</li>
+      <li><strong>Host bind mount at the binary path:</strong> remove <strong>only that binary mount</strong> after the backup. Do not remove the data mount.</li>
+      <li><strong>Custom entrypoint or wrapper:</strong> if it launches a host core, resolve that override separately; do not change the image's Node entrypoint.</li>
+      <li><strong>Data volume:</strong> keep the existing node data mount (default <code>/var/lib/pg-node</code>). Do not delete the volume or its <code>xray-core</code> directory to clean up. The old external core can stay unused; data and certificates live in that same volume.</li>
+      <li><strong>Do not run the installer's core-update command after this change</strong> (default install: <code>pg-node core-update</code>; a custom <code>--name</code> changes the command). That command would write the external <code>XRAY_EXECUTABLE_PATH</code> again and select the upstream external core instead of the image's baked binary.</li>
+    </ul>
+    <p>After recreating the container, confirm the effective value with the verification command below. Do not paste the full <code>docker inspect</code> or full <code>docker compose config</code> output anywhere public: those can expose secrets.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="step-number">4</span>Change the image and preserve the rest of the service</h3>
+    <p>In the node service block, replace the entire existing <code>image:</code> value with this line. The executable-path correction in step 3 is the only environment edit:</p>
+<pre><code>image: ghcr.io/chownyourlife/pasarguard-node-custom-xray@sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code></pre>
+    <div class="callout warn">
+      <p>Preserve the service's other environment values, TLS certificate and key paths, existing data mount, <code>network_mode</code>, <code>cap_add</code>, <code>sysctls</code>, ports, resources, and Node entrypoint. Do not edit the API key. Do not add volumes or environment variables other than the required <code>XRAY_EXECUTABLE_PATH</code>. Keep the data mount in place; on the default installer it is <code>/var/lib/pg-node</code>. If the image value is defined through an interpolated variable, change only the value used by this service and do not repurpose a variable shared by other services.</p>
+    </div>
+    <p>Do not use <code>latest</code> or the <code>sha-5355...</code> tag for this cutover. Both can be moved. The digest above is the pin. The image swap alone is not sufficient on a host whose environment still points at the external core; that is why step 3 is mandatory.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="step-number">5</span>Validate and pull without restarting the node</h3>
+<pre><code>docker compose config --quiet
+docker compose config --images
+docker compose pull "$SERVICE"</code></pre>
+    <p><code>config --quiet</code> validates the Compose file and exits nonzero on syntax or interpolation problems. <code>config --images</code> prints the resolved image reference; confirm it is the digest above. The pull only downloads the image; the old node keeps running.</p>
+    <p>Optional platform check after the pull:</p>
+<pre><code>docker image inspect --format '{{.Os}}/{{.Architecture}}' "ghcr.io/chownyourlife/pasarguard-node-custom-xray@sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f"</code></pre>
+    <p>The result should be <code>linux/amd64</code> or <code>linux/arm64</code> matching the host. If validation or pull fails, stop here; the old container has not been recreated and data has not been touched. Fix the issue or restore the backup before continuing.</p>
+  </div>
+
+  <div class="step">
+    <h3><span class="step-number">6</span>Recreate only the canary node</h3>
+    <div class="callout danger">
+      <p>Active Xray sessions on this node will be interrupted, and the panel may briefly show the node disconnected. This is not a zero-downtime upgrade. Do this on one canary server first.</p>
+    </div>
+<pre><code>docker compose up -d --no-deps "$SERVICE"
+docker compose ps "$SERVICE"</code></pre>
+    <p><code>--no-deps</code> keeps Compose from touching other services in the project. Run this with the same existing project and file flags as before; a different directory or project name can create a second stack. Compose normally recreates the container because the image digest and environment changed; if it says the container is already up to date, add <code>--force-recreate</code> to the same command. That recreates the container without deleting volumes. Do not use <code>docker compose down</code>, <code>down -v</code>, <code>--remove-orphans</code>, or volume-deletion commands. The image change does not remove or migrate the node's data directory.</p>
+  </div>
+</section>
+
+<section id="verify">
+  <h2>Verify the canary before any rollout</h2>
+
+<pre><code>docker compose ps "$SERVICE"
+docker compose logs --tail=100 "$SERVICE"
+docker compose exec "$SERVICE" printenv XRAY_EXECUTABLE_PATH
+docker compose exec "$SERVICE" /usr/local/bin/xray version
+
+CID=$(docker compose ps -q "$SERVICE")
+docker inspect --format 'image_ref={{.Config.Image}} image_id={{.Image}}' "$CID"</code></pre>
+
+  <ul>
+    <li><strong>Container state:</strong> it is running and is not in a restart loop.</li>
+    <li><strong>Effective executable path:</strong> <code>printenv XRAY_EXECUTABLE_PATH</code> prints exactly <code>/usr/local/bin/xray</code>. If it prints a path under <code>/var/lib/pg-node</code> or another external location, the env correction did not take effect; fix it before testing further.</li>
+    <li><strong>Baked core:</strong> the <code>xray version</code> output contains the full commit <code>c8768463568d9655a67228531d4ed2690ee49dd7</code>. If the path check or version check fails, check for a host binary override and confirm the running image reference from the last command. A stale <code>XRAY_EXECUTABLE_PATH</code> is the first thing to rule out.</li>
+    <li><strong>Logs:</strong> no fatal errors, repeated restarts, authentication failures, or certificate errors. A log tail that simply ends without a fatal line is not by itself proof of health.</li>
+    <li><strong>Panel:</strong> the node shows connected and healthy in the panel after startup.</li>
+    <li><strong>Real client traffic:</strong> connect a real client through an existing inbound on this node and pass normal traffic. Confirm the node handles it and, if the panel exposes accounting or online status for that node, that it updates. Do not stop at <code>docker compose ps</code> or a TCP port check.</li>
+  </ul>
+
+  <div class="callout warn">
+    <p><strong>Rollback triggers:</strong> wrong <code>XRAY_EXECUTABLE_PATH</code>, missing fork commit, panel disconnect, client failure, TLS or authentication errors, container restart loop, or new fatal/error log lines. Roll back first, then diagnose. Do not keep restarting a live node that failed the canary.</p>
+  </div>
+
+  <p>Only after this canary passes should you continue. If the panel exposes a reported core version, verify it there as well; otherwise rely on the <code>xray version</code> exec check plus real client traffic.</p>
+</section>
+
+<section id="rollout">
+  <h2>Rollout and rollback</h2>
+
+  <h3>Roll out one server at a time</h3>
+  <p>After the canary has passed and been observed for a meaningful period under representative traffic, repeat the same digest change and executable-path correction on the next server. Back up each server's Compose file and env file, record its previous image ID, pull the same digest, and verify panel connection plus a real client before moving on.</p>
+  <ul>
+    <li>Do not restart all nodes at once; that takes every node offline simultaneously.</li>
+    <li>Do not use <code>latest</code> as the rollout target, even after the canary. Use the same digest on every host.</li>
+    <li>Keep each server's backups, env backup, and local <code>pg-node-rollback:&lt;timestamp&gt;</code> tag until the rollout is accepted.</li>
+    <li>Do not change API keys, certificate files, panel node records, data mounts, or host capability/routing settings as part of the rollout.</li>
+    <li>Do not run the installer's core-update command (default: <code>pg-node core-update</code>) on a node using this image. It re-points <code>XRAY_EXECUTABLE_PATH</code> at the external core.</li>
+    <li>Use the same existing Compose project and file flags on each host; do not create a second stack while intending to update the first.</li>
+  </ul>
+
+  <h3>Rollback a canary or a node</h3>
+  <p>Restore every file you changed, including the Compose file, any env file where you changed <code>XRAY_EXECUTABLE_PATH</code>, and any wrapper or systemd file you edited, then recreate only the node. This removes neither data nor volumes. Run it with the same existing project and file options.</p>
+<pre><code>cp -p -- "$COMPOSE_PATH.bak.$STAMP" "$COMPOSE_PATH"
+
+# If you edited an env file in step 3:
+cp -p -- "$ENV_FILE.bak.$STAMP" "$ENV_FILE"
+
+docker compose config --quiet
+docker compose up -d --no-deps --force-recreate "$SERVICE"
+
+docker compose ps "$SERVICE"
+docker compose logs --tail=100 "$SERVICE"</code></pre>
+  <p>Restoring the env backup also restores the previous <code>XRAY_EXECUTABLE_PATH</code>, which is appropriate for the previous image and environment. Then confirm the panel connection and test a real client again. If the previous image reference is no longer available locally, or the previous original tag may have moved, use the locally preserved rollback tag from step 2. <code>STAMP</code> is a non-exported shell variable, so Compose interpolation cannot see it; do not put the literal <code>pg-node-rollback:$STAMP</code> in the Compose file. Print the resolved tag in the same shell:</p>
+<pre><code>printf 'pg-node-rollback:%s\n' "$STAMP"</code></pre>
+  <p>Copy the actual output (for example, <code>pg-node-rollback:20261023T120000Z</code>) as the node service's complete <code>image:</code> value, change nothing else, run the same recreation command, and verify. That tag points at the exact previous image ID and was not pushed to a registry, so pinning it guarantees the same previous bytes even if the original tag has since been overwritten locally or moved in the registry. The env restore above still applies, so the previous image also runs with its previous environment.</p>
+  <div class="callout danger">
+    <p><strong>Never</strong> run <code>docker compose down -v</code>, delete the node data directory (default <code>/var/lib/pg-node</code>) or its <code>xray-core</code> directory, remove certificate files, or delete the node's API key as part of a rollback. Those actions can destroy data or break the panel connection and are not required by this image change.</p>
+  </div>
+  <p>If the failure was caused by an incompatible panel version, rollback returns the node to its previous image and environment, but the panel compatibility issue still needs a separate, planned fix. Do not use repeated production restarts as the diagnosis method.</p>
+</section>
+
+<section id="fresh">
+  <h2>Fresh-server prerequisites</h2>
+  <p>This is deliberately not a complete install guide. A fresh node needs panel-side setup, a working API key, TLS certificates, data paths, and firewall/network configuration that the image does not create for you. Start from the <a href="https://docs.pasarguard.org/en/node/installation/">official Node installation documentation</a> (the guide targets Node v0.5.5) and the upstream Compose reference, then use this image in the node service.</p>
+  <ol>
+    <li>Install a current Docker Engine and Compose v2 plugin on a supported <code>linux/amd64</code> or <code>linux/arm64</code> host, and permit outbound HTTPS to <code>ghcr.io</code>.</li>
+    <li>Use a compatible panel (v5.4.1 or v5.5.0; v5.5.0 is required for routing hot reload and Xray WireGuard inbounds according to the Node release notes). Create the node in the panel and provision its API key and TLS certificate/key following the official instructions.</li>
+    <li>Follow the official Node setup for the data directory, TLS paths, network mode, port, and protocol. The upstream installer conventionally uses project <code>pg-node</code>, <code>/opt/pg-node/docker-compose.yml</code>, and <code>/opt/pg-node/.env</code>; a custom <code>--name</code> or <code>APP_DIR</code> changes those paths. This image does not generate or renew certificates, generate or register a node API key, open firewall ports, or download or refresh geodata at startup.</li>
+    <li>Use the upstream Compose file and environment example, fill in host-specific values and real credentials locally, and set the node service's image to the digest above. Set <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code> in the actual service environment, and leave the other service settings from the upstream file intact. Do not copy a made-up Compose file with placeholder credentials from this repository.</li>
+    <li>If you used the installer's core-update command (default: <code>pg-node core-update</code>) for any reason, it will have written an external-core path into the env file. Change only that value back to <code>/usr/local/bin/xray</code>; do not delete the data volume or its <code>xray-core</code> directory. Avoid that command on a node that should use this image's baked core.</li>
+    <li>Start one node, verify the effective <code>XRAY_EXECUTABLE_PATH</code>, panel connection, and a real client, then follow the same verification and canary approach. The rollback path is less relevant on a brand-new server, but keep the working upstream configuration before the image change.</li>
+  </ol>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Pinned upstream defaults for reference; official docs remain authoritative</caption>
+      <thead>
+        <tr><th scope="col">Setting</th><th scope="col">Reference value</th></tr>
+      </thead>
+      <tbody>
+        <tr><th scope="row">Compose service</th><td><code>node</code></td></tr>
+        <tr><th scope="row">Network</th><td>Host network in the upstream Compose file; preserve it unless your documented deployment says otherwise.</td></tr>
+        <tr><th scope="row">Data mount</th><td><code>/var/lib/pg-node:/var/lib/pg-node</code></td></tr>
+        <tr><th scope="row">TLS paths</th><td><code>SSL_CERT_FILE=/var/lib/pg-node/certs/ssl_cert.pem</code> and <code>SSL_KEY_FILE=/var/lib/pg-node/certs/ssl_key.pem</code></td></tr>
+        <tr><th scope="row">Service listener</th><td><code>SERVICE_PORT=62050</code>, <code>SERVICE_PROTOCOL=grpc</code></td></tr>
+        <tr><th scope="row">API key</th><td>Required, nonzero UUID in <code>API_KEY</code>; it must match the panel's node credential.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted">Those values come from the pinned upstream <code>docker-compose.yml</code> and <code>.env.example</code> referenced in <a href="#sources">Sources</a>. They are context, not a substitute for the official setup guide. Do not expose the node's gRPC port beyond the intended panel network without reviewing the upstream security guidance.</p>
+  <div class="callout warn">
+    <p><strong>Required for this image:</strong> the service environment must resolve <code>XRAY_EXECUTABLE_PATH</code> to <code>/usr/local/bin/xray</code>. Do not point it at an external core under the data directory. The PasarGuard installer script's core-update flow is designed for an external core and does not select the binary baked into this image.</p>
+  </div>
+</section>
+
+<section id="compatibility">
+  <h2>Compatibility and behavior</h2>
+  <ul>
+    <li><strong>Panel:</strong> Node v0.5.5 explicitly lists panel v5.4.1 and v5.5.0. Versions older than v5.4.1 are unverified by this project. Routing hot reload and Xray WireGuard inbounds need panel v5.5.0; do not enable newly unsupported features during this cutover.</li>
+    <li><strong>Node version:</strong> the base is the official Node v0.5.5 image pinned by digest. This is not a newer or older Node release.</li>
+    <li><strong>Core behavior:</strong> only the Xray binary is replaced. The Node application, its entrypoint, packages, and geodata path are inherited from the base image. There is no application-code change in this image.</li>
+    <li><strong>Runtime downloads:</strong> the image adds no startup downloads. Geodata and packages are whatever the pinned base image contains; updating the base is a separate rebuild decision.</li>
+    <li><strong>Credentials and data:</strong> replacing the image does not rewrite the API key, TLS files, other environment values, or node data. The one required environment correction is <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code>; preserve everything else and keep the panel entry matching.</li>
+    <li><strong>External core updates:</strong> do not use the upstream installer's <code>core-update</code> flow to update this image's core. It writes an external-core <code>XRAY_EXECUTABLE_PATH</code> and would bypass the baked binary. Build and publish a new image instead.</li>
+    <li><strong>Capabilities and routing:</strong> preserve existing host capabilities and routing only. The image does not add WireGuard permissions or configure host sysctls.</li>
+    <li><strong>Support scope:</strong> this is an unofficial custom image. The upstream Node and Xray projects are separate; this deployment guide does not imply upstream support for the fork.</li>
+  </ul>
+</section>
+
+<section id="evidence">
+  <h2>Verification evidence and limitations</h2>
+  <div class="callout">
+    <p><strong>What was executed.</strong> The following checks were run by the project's CI and local test work. The deployment commands earlier in this guide were not executed against a production PasarGuard panel or server. The upstream installer script was read for guidance, not executed.</p>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <caption>Executed checks and source facts</caption>
+      <thead>
+        <tr><th scope="col">Check or fact</th><th scope="col">Result / reference</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Base image pin</th>
+          <td>Official <code>pasarguard/node:v0.5.5</code> at <code>sha256:5f41e456ad68c84f42855b41eb41d69a79e8b3795bbe6a739ed74c4627eaa99b</code>.</td>
+        </tr>
+        <tr>
+          <th scope="row">Core source pin</th>
+          <td>Xray fork commit <code>c8768463568d9655a67228531d4ed2690ee49dd7</code>; source archive checksum pinned as <code>sha256:fedfd3d5fa3169361dcdb5fbf91e94a28f853e684bc2b055acc52fb176b7fdbd</code>; builder pinned to <code>golang:1.27.1-alpine@sha256:8a5910f31396cd4d89662f56c68b3ae31d374308270a1c3bd96672ee5ed43414</code>.</td>
+        </tr>
+        <tr>
+          <th scope="row">CI workflow run</th>
+          <td>Both native build jobs (linux/amd64 and linux/arm64), their smoke tests, and publication succeeded: <a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/actions/runs/39966584073">run 39966584073</a>.</td>
+        </tr>
+        <tr>
+          <th scope="row">Smoke test coverage</th>
+          <td>Default gRPC service with an ephemeral TLS certificate and API UUID; stopped to started to stopped lifecycle; exact fork commit in <code>xray version</code>; <code>geoip:cn</code> and <code>geosite:cn</code> loaded; live backend statistics returned. The throwaway containers, network, certificate, and temporary files are removed afterwards.</td>
+        </tr>
+        <tr>
+          <th scope="row">Published multi-arch index</th>
+          <td>Inspected to contain <code>linux/amd64</code> and <code>linux/arm64</code>. The production digest is <code>sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code>.</td>
+        </tr>
+        <tr>
+          <th scope="row">Anonymous pull and exact-digest smoke</th>
+          <td>An ARM64 pull with an empty Docker credential configuration succeeded, confirming the public package can be pulled without login. A smoke test of the exact published digest then passed on ARM64.</td>
+        </tr>
+        <tr>
+          <th scope="row">Upstream installer review</th>
+          <td>The PasarGuard <code>pg-node.sh</code> script was read, not executed. It conventionally uses project <code>pg-node</code> with <code>APP_DIR=/opt/pg-node</code>, and its core-update flow writes <code>XRAY_EXECUTABLE_PATH</code> to <code>DATA_DIR/xray-core/xray</code> under the data volume.</td>
+        </tr>
+        <tr>
+          <th scope="row">Local builds</th>
+          <td>ARM64 local build and smoke test passed; AMD64 local build passed. CI additionally ran smoke on both native architectures.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <p><strong>Not claimed:</strong> no production panel or production server deployment, no live production client test, no full audit of the Xray fork, no protocol-by-protocol feature validation, no load or soak testing, no certificate-issuance test, and no verification of panel versions older than v5.4.1. The installer script was reviewed statically, not executed in every customization mode. Smoke coverage is narrow by design. The canary and real-client checks in this guide are still required.</p>
+  </div>
+</section>
+
+<section id="maintenance">
+  <h2>Maintenance and builds</h2>
+
+  <h3>When the image rebuilds</h3>
+  <ul>
+    <li>A push to <code>main</code> rebuilds only when it changes <code>Dockerfile</code>, <code>.dockerignore</code>, <code>scripts/**</code>, or <code>.github/workflows/build.yml</code>. Documentation-only commits do not rebuild the image or move <code>latest</code>.</li>
+    <li>The workflow can also be started manually with <code>workflow_dispatch</code>.</li>
+    <li>Builds run natively on Ubuntu 24.04 amd64 and arm64 runners; smoke tests run before publication. Publication uses the workflow's <code>GITHUB_TOKEN</code> only.</li>
+    <li>A new build normally produces a new digest. Read the digest from the workflow summary; never assume <code>latest</code> or a commit tag still points at the digest in this guide. Update deployment pins only after the new image passes smoke and a canary.</li>
+  </ul>
+
+  <h3>Updating the custom Xray core</h3>
+  <div class="callout danger">
+    <p><strong>Do not use the installer's core-update command (default: <code>pg-node core-update</code>) to update this image.</strong> It writes <code>XRAY_EXECUTABLE_PATH</code> to an external core under the data directory; running that flow would bypass the baked binary and defeat this image. Update the pinned source in the Dockerfile, publish a new digest, and roll it out with the same canary process. Do not delete the node data directory (default <code>/var/lib/pg-node</code>) or its <code>xray-core</code> directory as part of that work.</p>
+  </div>
+  <ol>
+    <li>Replace the full commit in the Dockerfile source URL and in the <code>-X github.com/xtls/xray-core/core.build=</code> build metadata.</li>
+    <li>Replace the source archive's SHA-256 checksum.</li>
+    <li>Update the image labels that record the Xray source and commit.</li>
+    <li>Update <code>CORE_COMMIT</code> in <code>scripts/smoke.sh</code> so the smoke test checks the new version.</li>
+    <li>If the Node base changes, review the base digest, the upstream compatibility statement, and the <code>NODE_COMMIT</code> used for the smoke test's gRPC schema. Then run CI and canary the result.</li>
+  </ol>
+  <p>The builder image, Node base image, and GitHub Action pins are deliberate. Review any pin change as a supply-chain change rather than routinely replacing them. The image has no runtime download step, so refreshing geodata or the core requires a rebuild, not a restart with a new download.</p>
+</section>
+
+<section id="changelog">
+  <h2>Initial changelog</h2>
+  <div class="table-wrap">
+    <table>
+      <caption>Initial release changes</caption>
+      <thead>
+        <tr><th scope="col">Change</th><th scope="col">Details</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Image added</th>
+          <td>Initial public GHCR image built from PasarGuard Node v0.5.5 with the Xray fork at commit <code>c8768463568d9655a67228531d4ed2690ee49dd7</code>; published for <code>linux/amd64</code> and <code>linux/arm64</code> at digest <code>sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code>.</td>
+        </tr>
+        <tr>
+          <th scope="row">CI added</th>
+          <td>Build workflow added: native amd64 and arm64 builds, smoke tests, and multi-arch GHCR publication using the repository token only.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The image's functional change is the Xray binary. Node application code, the Node entrypoint, and the upstream Compose defaults are inherited/unchanged. This deployment guide is documentation for that image.</p>
+</section>
+
+<section id="sources">
+  <h2>Sources</h2>
+  <ul class="source-list">
+    <li><a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray">Project repository</a> and <a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/blob/main/Dockerfile">Dockerfile</a>.</li>
+    <li><a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/blob/main/.github/workflows/build.yml">Build and publish workflow</a>; <a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/blob/main/scripts/smoke.sh">smoke test</a>; <a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/actions/runs/39966584073">successful CI run 39966584073</a>.</li>
+    <li><a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/pkgs/container/pasarguard-node-custom-xray">Published GHCR package</a>.</li>
+    <li><a href="https://github.com/PasarGuard/node/releases/tag/v0.5.5">PasarGuard Node v0.5.5 release</a>; <a href="https://github.com/PasarGuard/node">PasarGuard Node repository</a>.</li>
+    <li><a href="https://docs.pasarguard.org/en/node/installation/">Official PasarGuard Node installation documentation</a> (primary installation and configuration guide).</li>
+    <li><a href="https://github.com/PasarGuard/scripts">PasarGuard scripts repository</a>; <a href="https://raw.githubusercontent.com/PasarGuard/scripts/main/pg-node.sh">pg-node.sh installer script</a> (read for this guide, not executed; the link is the current main branch, not a pinned release).</li>
+    <li><a href="https://raw.githubusercontent.com/PasarGuard/node/47857d43fe777f30f9ecc5f2ffe4ca0b037507cb/docker-compose.yml">Upstream Compose file at the verified Node commit</a>; <a href="https://raw.githubusercontent.com/PasarGuard/node/47857d43fe777f30f9ecc5f2ffe4ca0b037507cb/.env.example">upstream environment example at the same commit</a>.</li>
+    <li><a href="https://github.com/T3ST3ST3R0N/Xray-core/commit/c8768463568d9655a67228531d4ed2690ee49dd7">Custom Xray core commit</a>.</li>
+    <li><a href="https://docs.docker.com/engine/install/">Docker Engine installation documentation</a> for host prerequisites.</li>
+  </ul>
+</section>
+
+</main>
+
+<footer>
+  <p>Operator guide for the custom PasarGuard node image. No production server, panel, or client was changed while writing this document. Verify the canary before rolling out; use the image digest, set <code>XRAY_EXECUTABLE_PATH=/usr/local/bin/xray</code>, preserve credentials and data, and keep the immediately previous deployment available for rollback.</p>
+</footer>
+
+</body>
+</html>
