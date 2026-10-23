@@ -1,0 +1,117 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - Dockerfile
+      - .dockerignore
+      - scripts/**
+      - .github/workflows/build.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE: ghcr.io/chownyourlife/pasarguard-node-custom-xray
+
+jobs:
+  build:
+    name: build (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          version: v0.38.1
+      - name: Build image
+        env:
+          PLATFORM: ${{ matrix.platform }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -eu
+          docker buildx build \
+            --platform "$PLATFORM" \
+            --load \
+            --tag "pasarguard-node-custom-xray:ci-$ARCH" \
+            .
+      - name: Smoke test
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: scripts/smoke.sh "pasarguard-node-custom-xray:ci-${{ matrix.arch }}"
+      - name: Save image
+        run: docker save --output "$RUNNER_TEMP/image-${{ matrix.arch }}.tar" "pasarguard-node-custom-xray:ci-${{ matrix.arch }}"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.arch }}
+          path: ${{ runner.temp }}/image-${{ matrix.arch }}.tar
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: publish
+    needs: build
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image-amd64
+          path: images/amd64
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: image-arm64
+          path: images/arm64
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        with:
+          version: v0.38.1
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish multi-arch image
+        run: |
+          set -eu
+          docker load --input images/amd64/image-amd64.tar
+          docker load --input images/arm64/image-arm64.tar
+          docker tag pasarguard-node-custom-xray:ci-amd64 "$IMAGE:sha-$GITHUB_SHA-amd64"
+          docker tag pasarguard-node-custom-xray:ci-arm64 "$IMAGE:sha-$GITHUB_SHA-arm64"
+          docker push "$IMAGE:sha-$GITHUB_SHA-amd64"
+          docker push "$IMAGE:sha-$GITHUB_SHA-arm64"
+          docker buildx imagetools create \
+            --tag "$IMAGE:sha-$GITHUB_SHA" \
+            --tag "$IMAGE:latest" \
+            "$IMAGE:sha-$GITHUB_SHA-amd64" \
+            "$IMAGE:sha-$GITHUB_SHA-arm64"
+      - name: Summarize published image
+        run: |
+          set -euo pipefail
+          digest=$(docker buildx imagetools inspect --format '{{json .Manifest}}' "$IMAGE:sha-$GITHUB_SHA" | jq -r '.digest')
+          [ -n "$digest" ]
+          {
+            echo '### Published image'
+            echo
+            printf -- '- Manifest digest: `%s`\n' "$digest"
+            printf -- '- Production pull: `docker pull %s@%s`\n' "$IMAGE" "$digest"
+            printf -- '- Commit tag pull: `docker pull %s:sha-%s`\n' "$IMAGE" "$GITHUB_SHA"
+            echo
+            echo 'Use the digest or commit tag for production; `latest` is not recommended.'
+          } >> "$GITHUB_STEP_SUMMARY"
