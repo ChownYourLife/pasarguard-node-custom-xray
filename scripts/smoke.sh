@@ -4,7 +4,7 @@
 #   scripts/smoke.sh IMAGE
 #   PLATFORM=linux/amd64 scripts/smoke.sh IMAGE
 #
-# Proves the image's Node v0.5.5 service controls the baked-in Xray fork:
+# Proves the pinned PasarGuard Node release controls the baked-in Xray fork:
 #   - /usr/local/bin/xray version contains the pinned fork commit
 #   - a config using geoip:cn and geosite:cn starts (both geodata files load)
 #   - GetBaseInfo goes stopped -> started -> stopped
@@ -19,7 +19,8 @@ set -euo pipefail
 
 CORE_COMMIT=7e50e6084bdfe5713a5848f3b6317e4f0a57dbe4
 # The gRPC schema of the official node release this image extends.
-NODE_COMMIT=47857d43fe777f30f9ecc5f2ffe4ca0b037507cb
+NODE_COMMIT=739eab94a9343d9f0035baf7162796844109f4c4
+NODE_VERSION=v0.5.7
 PROTO_URL="https://raw.githubusercontent.com/PasarGuard/node/${NODE_COMMIT}/common/service.proto"
 # grpcurl v1.9.3 multi-arch index, pinned by digest.
 GRPCURL_IMAGE='fullstorydev/grpcurl:v1.9.3@sha256:085e183ca334eb4e81ca81ee12cbb2b2737505d1d77f5e33dabc5d066593d998'
@@ -152,6 +153,8 @@ done
 echo "smoke: checking initial stopped state"
 grep -Eq '"started"[[:space:]]*:[[:space:]]*false' <<<"$base_info" \
   || fail "initial GetBaseInfo does not report stopped: $base_info"
+grep -Eq '"(nodeVersion|node_version)"[[:space:]]*:[[:space:]]*"v?'"${NODE_VERSION#v}"'"' <<<"$base_info" \
+  || fail "GetBaseInfo does not report Node $NODE_VERSION: $base_info"
 
 echo "smoke: checking baked Xray commit"
 xray_version=$(docker exec "$node_container" /usr/local/bin/xray version 2>&1) \

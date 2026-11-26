@@ -15,16 +15,16 @@ RUN tar -xzf /tmp/xray.tar.gz --strip-components=1 -C /src && \
     -ldflags="-s -w -buildid= -X github.com/xtls/xray-core/core.build=7e50e6084bdfe5713a5848f3b6317e4f0a57dbe4" \
     -o /out/xray ./main
 
-FROM docker.io/pasarguard/node:v0.5.5@sha256:5f41e456ad68c84f42855b41eb41d69a79e8b3795bbe6a739ed74c4627eaa99b
+FROM docker.io/pasarguard/node:v0.5.7@sha256:abfbf411ad38c0df08f07edbe834b8e588ec8566af75b827ee4c7efce841560b
 
 LABEL org.opencontainers.image.source="https://github.com/ChownYourLife/pasarguard-node-custom-xray" \
       org.opencontainers.image.licenses="GPL-3.0-only AND MPL-2.0" \
-      org.opencontainers.image.base.name="docker.io/pasarguard/node:v0.5.5" \
-      org.opencontainers.image.base.digest="sha256:5f41e456ad68c84f42855b41eb41d69a79e8b3795bbe6a739ed74c4627eaa99b" \
+      org.opencontainers.image.base.name="docker.io/pasarguard/node:v0.5.7" \
+      org.opencontainers.image.base.digest="sha256:abfbf411ad38c0df08f07edbe834b8e588ec8566af75b827ee4c7efce841560b" \
       io.github.chownyourlife.pasarguard-node.source="https://github.com/PasarGuard/node" \
       io.github.chownyourlife.xray.source="https://github.com/T3ST3ST3R0N/Xray-core" \
       io.github.chownyourlife.xray.commit="7e50e6084bdfe5713a5848f3b6317e4f0a57dbe4" \
-      io.github.chownyourlife.pasarguard-node.version="v0.5.5"
+      io.github.chownyourlife.pasarguard-node.version="v0.5.7"
 
 COPY --from=core --chmod=0755 /out/xray /usr/local/bin/xray
 COPY --from=core /src/LICENSE /usr/share/licenses/xray/LICENSE

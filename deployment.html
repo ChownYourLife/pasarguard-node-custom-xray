@@ -279,8 +279,12 @@
     <p><strong>Canary first. Do not roll out to every node at once.</strong> Recreating the Node container interrupts its Xray processes and disconnects active clients on that node. Validate one non-critical server, then move one server at a time.</p>
   </div>
 
+  <div class="callout warn">
+    <p><strong>This guide records the original v0.5.5 rollout.</strong> New builds use PasarGuard Node v0.5.7 with Xray <code>7e50e608</code>. For a new rollout, take the immutable image reference from the <a href="https://github.com/ChownYourLife/pasarguard-node-custom-xray/actions/workflows/build.yml">successful build summary</a> and canary that digest. Keep the original reference below as a rollback option.</p>
+  </div>
+
   <div>
-    <span class="ref-label">Production image reference: use this exact digest</span>
+    <span class="ref-label">Original v0.5.5 image reference</span>
     <code class="image-ref">ghcr.io/chownyourlife/pasarguard-node-custom-xray@sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code>
   </div>
 
@@ -673,6 +677,10 @@ docker compose logs --tail=100 "$SERVICE"</code></pre>
         <tr><th scope="col">Change</th><th scope="col">Details</th></tr>
       </thead>
       <tbody>
+        <tr>
+          <th scope="row">Node base updated</th>
+          <td>The build now pins the official PasarGuard Node <a href="https://github.com/PasarGuard/node/releases/tag/v0.5.7">v0.5.7 release</a> for amd64 and arm64. It keeps the custom Xray pin at <code>7e50e608</code>. The smoke test uses the v0.5.7 gRPC schema and checks the running node reports the expected version.</td>
+        </tr>
         <tr>
           <th scope="row">Image added</th>
           <td>Initial public GHCR image built from PasarGuard Node v0.5.5 with the Xray fork at commit <code>c8768463568d9655a67228531d4ed2690ee49dd7</code>; published for <code>linux/amd64</code> and <code>linux/arm64</code> at digest <code>sha256:bb09c94de5c448c1397634808f4158166a83ad1df80b0c180183d3cedf815f3f</code>.</td>
