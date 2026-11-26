@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-CORE_COMMIT=c8768463568d9655a67228531d4ed2690ee49dd7
+CORE_COMMIT=7e50e6084bdfe5713a5848f3b6317e4f0a57dbe4
 # The gRPC schema of the official node release this image extends.
 NODE_COMMIT=47857d43fe777f30f9ecc5f2ffe4ca0b037507cb
 PROTO_URL="https://raw.githubusercontent.com/PasarGuard/node/${NODE_COMMIT}/common/service.proto"
